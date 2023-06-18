@@ -1,0 +1,9 @@
+[package]
+name = "mail-backup"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+dotenv = "0.15.0"
+imap = "2.4.1"
+native-tls = "0.2.11"
