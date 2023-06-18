@@ -1,5 +1,6 @@
+use serde::Deserialize;
+use std::fs;
 use std::path::Path;
-use std::{env, fs};
 
 type ImapSession = imap::Session<native_tls::TlsStream<std::net::TcpStream>>;
 
@@ -9,31 +10,47 @@ struct Message {
     body: Vec<u8>,
 }
 
-fn main() {
-    dotenv::dotenv().unwrap();
-
-    // To connect to the gmail IMAP server with this you will need to allow unsecure apps access.
-    // See: https://support.google.com/accounts/answer/6010255?hl=en
-    // Look at the gmail_oauth2.rs example on how to connect to a gmail server securely.
-    fetch_inbox_top().unwrap();
+#[derive(Deserialize, Debug)]
+struct Connections {
+    connections: Vec<Connection>,
 }
 
-fn fetch_inbox_top() -> imap::error::Result<Option<String>> {
-    let domain = &*Box::leak(env::var("IMAP_SERVER").unwrap().into_boxed_str());
-    let tls = native_tls::TlsConnector::builder().build().unwrap();
-    let client = imap::connect((domain, 993), domain, &tls).unwrap();
+#[derive(Deserialize, Debug)]
+struct Connection {
+    // TODO: &str
+    domain: String,
+    username: String,
+    password: String,
+}
 
-    let mut imap_session = client
-        .login(
-            env::var("IMAP_MAIL").unwrap(),
-            env::var("IMAP_PASSWORD").unwrap(),
-        )
-        .unwrap();
+fn main() {
+    // dotenv::dotenv().unwrap();
+    let data = fs::read_to_string("config.toml").unwrap();
+    let connections = toml::from_str::<Connections>(data.as_str())
+        .unwrap()
+        .connections;
+
+    for connection in connections {
+        fetch_inbox(connection).unwrap();
+    }
+}
+
+fn fetch_inbox(connection: Connection) -> imap::error::Result<Option<String>> {
+    let Connection {
+        domain,
+        username,
+        password,
+    } = connection;
+
+    let tls = native_tls::TlsConnector::builder().build().unwrap();
+    let client = imap::connect((domain.as_str(), 993), domain.as_str(), &tls).unwrap();
+
+    let mut imap_session = client.login(&username, password).unwrap();
 
     // List all folders & messages
     let folders = imap_session.list(Some("*"), Some("*")).unwrap();
     folders.iter().for_each(|f| {
-        let dir = format!("export/{}", f.name());
+        let dir = format!("export/{username}/{}", f.name());
         println!("--- {:?}", f);
 
         let mailbox = imap_session.examine(f.name()).unwrap();
