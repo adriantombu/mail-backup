@@ -1,3 +1,4 @@
+use anyhow::{Context, Result};
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
@@ -6,8 +7,8 @@ pub struct Connections {
 }
 
 impl Connections {
-    pub fn new(data: &str) -> Vec<Connection> {
-        toml::from_str::<Connections>(data).unwrap().connections
+    pub fn try_new(data: &str) -> Result<Self> {
+        toml::from_str::<Connections>(data).context("Could not parse connections from config file")
     }
 }
 

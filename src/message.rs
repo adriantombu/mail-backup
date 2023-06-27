@@ -1,4 +1,5 @@
-use crate::session::ImapSession;
+use crate::session::Session;
+use anyhow::{Context, Result};
 use std::fs;
 use std::path::Path;
 
@@ -10,30 +11,26 @@ pub struct Message {
 
 impl Message {
     // TODO: retrieve last saved email to avoid refetching everything
-    pub fn fetch(from: u32, to: u32, imap_session: &mut ImapSession) -> Vec<Message> {
-        let result = imap_session.fetch(format!("{from}:{to}"), "(UID RFC822)");
+    pub fn fetch(from: u32, to: u32, session: &mut Session) -> Result<Vec<Message>> {
+        let messages = session.get_messages_by_range(from, to)?;
 
-        if let Ok(messages) = result {
-            return messages
-                .iter()
-                .map(|message| Message {
-                    uid: message.uid.unwrap(),
-                    body: message.body().map(|x| x.to_vec()).unwrap(),
-                })
-                .collect::<Vec<_>>();
-        } else {
-            println!("{:?}", result);
-        }
-
-        vec![]
+        Ok(messages
+            .iter()
+            .map(|message| Message {
+                uid: message.uid.unwrap(),
+                body: message.body().map(<[u8]>::to_vec).unwrap(),
+            })
+            .collect::<Vec<_>>())
     }
 
-    pub fn save(dir: &str, message: &Message) {
+    pub fn save(dir: &str, message: &Message) -> Result<()> {
         let path = format!("{dir}/{:07}.eml", &message.uid);
 
         if !Path::new(&path).exists() {
             println!("Saving message to {path}");
-            fs::write(&path, &message.body).unwrap();
+            fs::write(&path, &message.body).context("Unable to write message to file")?;
         }
+
+        Ok(())
     }
 }

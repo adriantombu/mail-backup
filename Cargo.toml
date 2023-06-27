@@ -2,8 +2,16 @@
 name = "mail-backup"
 version = "0.1.0"
 edition = "2021"
+authors = ["Adrian Tombu <adrian@otso.fr>"]
+keywords = ["imap", "email", "backup"]
+categories = ["command-line-utilities", "web-programming"]
+description = "Make a backup of your emails"
+license = "MIT"
+repository = "https://github.com/adriantombu/mail-backup"
+include = ["/src", "LICENSE.md", "README.md"]
 
 [dependencies]
+anyhow = "1"
 imap = "2.4"
 native-tls = "0.2"
 serde = { version = "1", features = ["derive"] }

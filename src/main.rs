@@ -5,13 +5,15 @@ mod session;
 
 use crate::connection::Connections;
 use crate::mailbox::Mailbox;
+use anyhow::{Context, Result};
 use std::fs;
 
-// TODO: manage errors
-fn main() {
-    let data = fs::read_to_string("config.toml").unwrap();
+fn main() -> Result<()> {
+    let data = fs::read_to_string("config.toml").context("Could not read config.toml file")?;
 
-    Connections::new(&data).iter().for_each(|connection| {
-        Mailbox::fetch_all(connection);
-    });
+    for connection in &Connections::try_new(&data)?.connections {
+        Mailbox::fetch_all(connection)?;
+    }
+
+    Ok(())
 }
